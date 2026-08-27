@@ -1,0 +1,19 @@
+# Executáveis
+*.exe
+*.out
+*.o
+*.obj
+*.class
+
+# Diretórios de compilação
+build/
+bin/
+dist/
+
+# IDEs
+.vscode/
+.idea/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
