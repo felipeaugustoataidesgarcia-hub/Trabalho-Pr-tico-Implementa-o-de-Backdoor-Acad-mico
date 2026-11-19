@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.cap
+*.pcapng
+*.hc22000
+*_scan-*.csv
