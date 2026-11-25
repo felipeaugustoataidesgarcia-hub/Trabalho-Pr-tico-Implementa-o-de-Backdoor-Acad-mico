@@ -16,6 +16,7 @@ disponibilizado pelo professor em laboratório.
 | `wifi_audit.sh` | **Menu central** que une tudo, pré-configurado para o TP-Link AC750 | **Kali Linux** |
 | `wifi_recon.py` | Extrai SSID, BSSID, canal, frequência, banda, criptografia e IP do gateway | **Windows e Linux** (Python 3, sem dependências externas) |
 | `wifi_crack.sh` | Orquestra WPS (Pixie Dust) / handshake / PMKID + quebra por dicionário | **Kali Linux** (aircrack-ng/reaver/hashcat) |
+| `gerar_relatorio.py` | Gera o relatório da atividade (.md) juntando recon + resultado do ataque | **Windows e Linux** (Python 3) |
 
 ## Início rápido (Kali)
 
@@ -130,6 +131,25 @@ Ao sair, a interface é restaurada automaticamente (`trap`).
 | 3 | Quebrar a senha offline | `wifi_crack.sh` | ❌ |
 | 4 | Conectar com a senha obtida | SO | ✅ |
 | 5 | IP do roteador | `wifi_recon.py` | ✅ |
+
+## 3. Relatório automático — `gerar_relatorio.py`
+
+Junta os dados do reconhecimento (JSON do `wifi_recon.py`) com o resultado do
+ataque e gera um relatório pronto em Markdown:
+
+```bash
+python wifi_recon.py --json dados.json          # 1) coleta
+python gerar_relatorio.py --json dados.json --target TP-Link \
+    --metodo wps --senha "senhaRecuperada" --wps-pin 12345670 \
+    --ip 192.168.0.1 --autor "Seu Nome" --saida relatorio.md
+```
+
+O relatório já traz nota de autorização, tabela de parâmetros da rede,
+metodologia, resultado e recomendações de segurança. Campos não informados
+ficam marcados com `_(preencher)_`. Converta para PDF, se quiser, com
+`pandoc relatorio.md -o relatorio.pdf`.
+
+---
 
 ## Observações para o relatório
 
