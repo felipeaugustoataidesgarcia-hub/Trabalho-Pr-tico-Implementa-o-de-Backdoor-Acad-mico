@@ -13,10 +13,24 @@ disponibilizado pelo professor em laboratório.
 
 | Arquivo | Função | Onde roda |
 |---|---|---|
-| `wifi_audit.sh` | **Menu central** que une tudo, pré-configurado para o TP-Link AC750 | **Kali Linux** |
+| `webui.py` | **Painel web** que une recon + montador de ataques + relatório | **Windows e Linux** (Flask) |
+| `wifi_audit.sh` | **Menu central** (terminal) pré-configurado para o TP-Link AC750 | **Kali Linux** |
 | `wifi_recon.py` | Extrai SSID, BSSID, canal, frequência, banda, criptografia e IP do gateway | **Windows e Linux** (Python 3, sem dependências externas) |
-| `wifi_crack.sh` | Orquestra WPS (Pixie Dust) / handshake / PMKID + quebra por dicionário | **Kali Linux** (aircrack-ng/reaver/hashcat) |
-| `gerar_relatorio.py` | Gera o relatório da atividade (.md) juntando recon + resultado do ataque | **Windows e Linux** (Python 3) |
+| `wifi_crack.sh` | Orquestra WPS (Pixie Dust) / WPS-BF / handshake / PMKID + quebra por dicionário | **Kali Linux** (aircrack-ng/reaver/hashcat) |
+| `gerar_wordlist_tplink.py` | Gera wordlist direcionada a padrões comuns de TP-Link | **Windows e Linux** (Python 3) |
+| `gerar_relatorio.py` | Gera o relatório da atividade (.md **e .html**) juntando recon + ataque | **Windows e Linux** (Python 3) |
+
+## Interface web — `webui.py`
+
+Painel local que junta tudo numa tela só (reconhecimento, montador dos comandos
+de ataque com botão de copiar, e gerador de relatório). Por segurança, os
+ataques (que exigem root + modo monitor) **não** são disparados pelo navegador:
+o painel monta o comando exato para você copiar e rodar no terminal.
+
+```bash
+pip install flask          # uma vez
+python webui.py            # abre em http://127.0.0.1:8000
+```
 
 ## Início rápido (Kali)
 
@@ -40,8 +54,20 @@ sudo ./wifi_audit.sh          # abre o menu com a ordem de ataque recomendada
 **Ordem de ataque recomendada** (do mais rápido ao mais lento):
 
 1. **WPS Pixie Dust** — `sudo ./wifi_crack.sh -i wlan0 -m wps` — recupera o PIN do WPS offline e, com ele, a senha WPA. Pode levar segundos. É o vetor clássico contra TP-Link; use o **BSSID de 2.4 GHz**.
-2. **PMKID** — `sudo ./wifi_crack.sh -i wlan0 -m pmkid` — rápido e não precisa de cliente conectado.
-3. **Handshake + dicionário** — `sudo ./wifi_crack.sh -i wlan0 -m handshake -b <BSSID> -c <canal>`.
+2. **WPS Bruteforce do PIN** — `sudo ./wifi_crack.sh -i wlan0 -m wps-bf` — *fallback* quando o Pixie Dust falha; testa os PINs (lento, sujeito a lockout).
+3. **PMKID** — `sudo ./wifi_crack.sh -i wlan0 -m pmkid` — rápido e não precisa de cliente conectado.
+4. **Handshake + dicionário** — `sudo ./wifi_crack.sh -i wlan0 -m handshake -b <BSSID> -c <canal>`.
+
+### Wordlist direcionada a TP-Link
+
+Para acelerar o ataque de dicionário com padrões comuns desses roteadores:
+
+```bash
+python gerar_wordlist_tplink.py -o tplink.txt --datas
+sudo ./wifi_crack.sh -i wlan0 -m handshake -w tplink.txt -b <BSSID> -c <canal>
+# espaço completo de 8 dígitos (via máscara, no hashcat):
+hashcat -m 22000 hash.hc22000 -a 3 ?d?d?d?d?d?d?d?d
+```
 
 > Firmwares mais novos do Archer C20 fazem *lockout* do WPS após algumas tentativas. Se o Pixie Dust travar (`WPS pin not found` / `rate limiting`), parta para PMKID/handshake.
 

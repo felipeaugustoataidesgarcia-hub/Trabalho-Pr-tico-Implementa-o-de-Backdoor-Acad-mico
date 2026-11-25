@@ -50,20 +50,32 @@ menu() {
     echo -e "Interface atual: ${G}${IFACE}${N}  (opcao 5 para trocar)\n"
     echo "  1) Reconhecimento  - extrair SSID/BSSID/canal/frequencia/cripto"
     echo "  2) Ataque WPS (Pixie Dust)          [recomendado p/ TP-Link]"
-    echo "  3) Ataque PMKID (sem cliente)"
-    echo "  4) Ataque Handshake + dicionario"
-    echo "  5) Trocar interface wireless"
-    echo "  6) Ficha do alvo (TP-Link AC750)"
+    echo "  3) Ataque WPS Bruteforce do PIN     (fallback do Pixie Dust)"
+    echo "  4) Ataque PMKID (sem cliente)"
+    echo "  5) Ataque Handshake + dicionario"
+    echo "  6) Gerar wordlist direcionada a TP-Link"
+    echo "  7) Gerar relatorio (.md + .html)"
+    echo "  8) Abrir painel web (webui.py)"
+    echo "  9) Trocar interface wireless (atual: $IFACE)"
+    echo "  i) Ficha do alvo (TP-Link AC750)"
     echo "  0) Sair"
     echo
     read -rp "Escolha: " op
     case "$op" in
-        1) python3 wifi_recon.py; pausa ;;
+        1) python3 wifi_recon.py --json dados.json; pausa ;;
         2) sudo ./wifi_crack.sh -i "$IFACE" -m wps; pausa ;;
-        3) sudo ./wifi_crack.sh -i "$IFACE" -m pmkid; pausa ;;
-        4) sudo ./wifi_crack.sh -i "$IFACE" -m handshake; pausa ;;
-        5) read -rp "Nova interface: " IFACE ;;
-        6) clear 2>/dev/null || true; ficha_tplink; pausa ;;
+        3) sudo ./wifi_crack.sh -i "$IFACE" -m wps-bf; pausa ;;
+        4) sudo ./wifi_crack.sh -i "$IFACE" -m pmkid; pausa ;;
+        5) sudo ./wifi_crack.sh -i "$IFACE" -m handshake; pausa ;;
+        6) python3 gerar_wordlist_tplink.py -o tplink.txt --datas; pausa ;;
+        7) read -rp "Seu nome: " a; read -rp "Senha recuperada: " s
+           read -rp "Metodo (wps/wps-bf/pmkid/handshake): " me
+           python3 gerar_relatorio.py --json dados.json --autor "$a" \
+                   --senha "$s" --metodo "$me" --saida relatorio.md --html relatorio.html
+           pausa ;;
+        8) command -v python3 >/dev/null && { echo "Abra http://127.0.0.1:8000"; python3 webui.py; } ; pausa ;;
+        9) read -rp "Nova interface: " IFACE ;;
+        i|I) clear 2>/dev/null || true; ficha_tplink; pausa ;;
         0) exit 0 ;;
         *) echo "Opcao invalida." ; sleep 1 ;;
     esac
