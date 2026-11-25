@@ -20,6 +20,12 @@ disponibilizado pelo professor em laboratório.
 | `gerar_wordlist_tplink.py` | Gera wordlist direcionada a padrões comuns de TP-Link | **Windows e Linux** (Python 3) |
 | `gerar_relatorio.py` | Gera o relatório da atividade (.md **e .html**) juntando recon + ataque | **Windows e Linux** (Python 3) |
 
+## Menu no Windows — `menu.bat`
+
+Para o PC Windows do laboratório (onde roda recon, IP, wordlist e relatório),
+basta dar **duplo-clique** em `menu.bat` — um menu cobre tudo que o Windows faz,
+sem precisar decorar comandos. A quebra da senha em si continua exigindo Kali.
+
 ## Interface web — `webui.py`
 
 Painel local que junta tudo numa tela só (reconhecimento, montador dos comandos
